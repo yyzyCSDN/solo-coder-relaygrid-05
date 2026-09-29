@@ -9,21 +9,29 @@ class CustomerInterruption:
     momentary: bool=False
 
 
+def _unique(events:list[CustomerInterruption]):
+    seen=set(); out=[]
+    for e in events:
+        if e.event_id in seen: continue
+        seen.add(e.event_id); out.append(e)
+    return out
+
+
 def saidi(events:list[CustomerInterruption],customers_served:int):
     if customers_served<=0: raise ValueError("customers served")
-    minutes=sum(e.customers*e.duration_min for e in events if not e.momentary)
+    minutes=sum(e.customers*e.duration_min for e in _unique(events) if not e.momentary)
     return minutes/customers_served
 
 
 def saifi(events:list[CustomerInterruption],customers_served:int):
     if customers_served<=0: raise ValueError("customers served")
-    interruptions=sum(e.customers for e in events if not e.momentary)
+    interruptions=sum(e.customers for e in _unique(events) if not e.momentary)
     return interruptions/customers_served
 
 
 def maifi(events:list[CustomerInterruption],customers_served:int):
     if customers_served<=0: raise ValueError("customers served")
-    moments=sum(e.customers for e in events if e.momentary)
+    moments=sum(e.customers for e in _unique(events) if e.momentary)
     return moments/customers_served
 
 

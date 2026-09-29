@@ -1,6 +1,6 @@
 from __future__ import annotations
 from collections import defaultdict
-from relaygrid.outage.metrics import merge_intervals, interruption_minutes
+from relaygrid.outage.metrics import merge_intervals, interruption_minutes, customer_minutes
 
 class OutageService:
     def __init__(self): self._events=[]
@@ -8,12 +8,18 @@ class OutageService:
         if customers<0 or end_min<start_min: raise ValueError("invalid outage")
         self._events.append((customer_group,customers,start_min,end_min))
     def customer_minutes(self):
-        grouped=defaultdict(list); counts={}
-        for group,customers,start,end in self._events:
-            grouped[group].append((start,end)); counts[group]=customers
-        return sum(counts[g]*interruption_minutes(iv) for g,iv in grouped.items())
+        return sum(summary["customer_minutes"] for summary in self.group_summaries().values())
     def group_summaries(self):
-        grouped=defaultdict(list); counts={}
+        grouped=defaultdict(list)
         for group,customers,start,end in self._events:
-            grouped[group].append((start,end)); counts[group]=customers
-        return {g:{"customers":counts[g],"intervals":merge_intervals(iv),"minutes":interruption_minutes(iv)} for g,iv in grouped.items()}
+            grouped[group].append((customers,start,end))
+        summaries={}
+        for group,events in grouped.items():
+            intervals=[(start,end) for _,start,end in events]
+            summaries[group]={
+                "customers":events[-1][0],
+                "intervals":merge_intervals(intervals),
+                "minutes":interruption_minutes(intervals),
+                "customer_minutes":customer_minutes(events),
+            }
+        return summaries
